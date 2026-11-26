@@ -8,7 +8,10 @@
     "collect:dry": "node collect.mjs --dry-run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.14.0",
+    "@mozilla/readability": "^0.6.0",
     "fast-xml-parser": "^5.12.1",
-    "linkedom": "^0.18.15"
+    "linkedom": "^0.18.15",
+    "zod": "^4.6.7"
   }
 }

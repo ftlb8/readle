@@ -12,6 +12,7 @@ on:
       - "curation/**"
       - ".github/workflows/keep-awake.yml"
       - ".github/workflows/collect.yml"
+      - ".github/workflows/judge.yml"
   workflow_dispatch:
 
 permissions:
