@@ -143,7 +143,7 @@ export function Reader({ id }: { id: string }) {
 
           {item.kind === "link" && (
             <div className="notice">
-              <p>{item.excerpt || "Readle could not extract a readable version of this page."}</p>
+              <p>{item.excerpt || "Readler could not extract a readable version of this page."}</p>
               <a className="primary button" href={item.url} target="_blank" rel="noopener noreferrer">
                 Open the original page
               </a>

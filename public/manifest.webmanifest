@@ -1,6 +1,6 @@
 {
-  "name": "Readle",
-  "short_name": "Readle",
+  "name": "Readler",
+  "short_name": "Readler",
   "description": "Save links to read or watch later.",
   "start_url": "./",
   "scope": "./",

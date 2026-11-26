@@ -1,4 +1,4 @@
-// Readle service worker: keeps the app itself (page, script, styles, icons)
+// Readler service worker: keeps the app itself (page, script, styles, icons)
 // on the device so it opens without a connection. Saved articles are stored
 // separately by the app, and requests to other sites are left alone.
 const CACHE = "readle-shell-v1";

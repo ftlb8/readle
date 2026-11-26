@@ -66,7 +66,7 @@ export function Login() {
 
   return (
     <main className="login">
-      <h1 className="brand">Readle</h1>
+      <h1 className="brand">Readler</h1>
       <p className="muted">Your reading list, saved for later.</p>
 
       {mode === "password" && (

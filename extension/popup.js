@@ -1,5 +1,5 @@
 // Opening the popup saves the current tab. If you are not signed in yet,
-// it asks for your Readle email and password first.
+// it asks for your Readler email and password first.
 import { APP_URL, NotSignedIn, getSession, save, signIn, signOut } from "./api.js";
 
 const $ = (id) => document.getElementById(id);
@@ -53,7 +53,7 @@ async function saveCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.url || !/^https?:/i.test(tab.url)) {
     $("message").textContent = "This page cannot be saved";
-    $("detail").textContent = "Readle saves web pages that start with http or https.";
+    $("detail").textContent = "Readler saves web pages that start with http or https.";
     return;
   }
 
@@ -63,7 +63,7 @@ async function saveCurrentTab() {
     const item = await save({ url: tab.url, html: await capture(tab) });
     $("message").textContent = describe(item);
     $("detail").textContent =
-      item.kind === "link" ? "Readle could not find an article on this page." : (item.title ?? tab.url);
+      item.kind === "link" ? "Readler could not find an article on this page." : (item.title ?? tab.url);
   } catch (err) {
     if (err instanceof NotSignedIn) return show("login");
     $("message").textContent = "Not saved";

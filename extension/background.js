@@ -1,9 +1,9 @@
-// Adds "Save link to Readle" to the right-click menu on links.
-// The result shows briefly as a mark on the Readle toolbar button.
+// Adds "Save link to Readler" to the right-click menu on links.
+// The result shows briefly as a mark on the Readler toolbar button.
 import { save } from "./api.js";
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({ id: "save-link", title: "Save link to Readle", contexts: ["link"] });
+  chrome.contextMenus.create({ id: "save-link", title: "Save link to Readler", contexts: ["link"] });
 });
 
 function badge(text, color) {

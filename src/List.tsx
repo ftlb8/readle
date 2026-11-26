@@ -83,7 +83,7 @@ export function List() {
   return (
     <main className="page">
       <header className="topbar">
-        <h1 className="brand">Readle</h1>
+        <h1 className="brand">Readler</h1>
         <span className="status muted">{!online ? "Offline" : syncing ? "Syncing…" : ""}</span>
         <details className="menu">
           <summary className="link">Account</summary>

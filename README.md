@@ -1,4 +1,4 @@
-# Readle
+# Readler
 
 A personal read-later app: save links from the phone's share sheet or a desktop
 browser, then read them in a clean view, online or offline.
@@ -28,7 +28,7 @@ Backend: Supabase project `readle` (ref `kgnpncskdmzwqmjrrupx`).
 
 1. Open `chrome://extensions` and turn on **Developer mode**.
 2. Click **Load unpacked** and choose the `extension` folder.
-3. Click the Readle button in the toolbar and sign in with your Readle email and password.
+3. Click the Readler button in the toolbar and sign in with your Readler email and password.
 
 After that, clicking the button (or pressing Alt+Shift+S) saves the current tab.
-Right-clicking a link offers **Save link to Readle**.
+Right-clicking a link offers **Save link to Readler**.

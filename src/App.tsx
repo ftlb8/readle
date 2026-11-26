@@ -84,7 +84,7 @@ export function App() {
       <div className="toasts" aria-live="polite">
         {updateReady && (
           <div className="toast">
-            <span>A new version of Readle is ready.</span>
+            <span>A new version of Readler is ready.</span>
             <button className="toast-action" onClick={() => window.location.reload()}>
               Reload
             </button>
