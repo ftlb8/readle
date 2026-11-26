@@ -9,7 +9,9 @@ on:
       - "extension/**"
       - "supabase/**"
       - "README.md"
+      - "curation/**"
       - ".github/workflows/keep-awake.yml"
+      - ".github/workflows/collect.yml"
   workflow_dispatch:
 
 permissions:

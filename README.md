@@ -14,6 +14,8 @@ browser, then read them in a clean view, online or offline.
 - `public/sw.js` — keeps the app itself available offline
 - `public/manifest.webmanifest` — makes it installable and adds it to Android's share sheet
 - `extension/` — Chrome extension that saves the current tab, including pages behind a login
+- `curation/` — daily job that reads the curated sources' feeds and records candidate articles
+  for the weekly suggestions (`sources.json` is the list of sources and their filters)
 - `supabase/migrations/` — database tables and security rules
 - `supabase/functions/save/` — fetches a saved link and extracts the readable article
   (or the embed details for a video)

@@ -1,0 +1,15 @@
+-- Weekly suggestions, phase 1: collecting candidate articles.
+-- Applied to the live project on 2026-11-26. The full statement text is kept
+-- in the project's migration history (Supabase dashboard → Database → Migrations,
+-- "curation_collection"). Summary of what it creates:
+--
+--   admins            who runs the curation (the first account)
+--   is_admin()        true for that person
+--   curation_config   private settings, including the hash of the collector's token
+--   sources           publications and curators, synced from curation/sources.json
+--   candidates        one row per article seen: link, title, short excerpt, dates,
+--                     which source it came from and which curators recommended it
+--   curation_ingest() the collector's only way in; requires the secret token and
+--                     can only add sources and candidates
+--
+-- Only the admin can read sources and candidates. Article text is never stored.

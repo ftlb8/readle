@@ -1,0 +1,14 @@
+{
+  "name": "readler-curation",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "collect": "node collect.mjs",
+    "collect:dry": "node collect.mjs --dry-run"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.12.1",
+    "linkedom": "^0.18.15"
+  }
+}

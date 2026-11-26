@@ -1,0 +1,34 @@
+# Reads the feeds of Readler's curated sources once a day and records new
+# articles as candidates for the weekly suggestions.
+name: Collect candidates
+
+on:
+  schedule:
+    - cron: "23 8 * * *" # every day at 08:23 UTC (05:23 in Brasília)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: curation
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: curation/package-lock.json
+      - run: npm ci
+      - run: node collect.mjs
+        env:
+          COLLECTOR_TOKEN: ${{ secrets.COLLECTOR_TOKEN }}
