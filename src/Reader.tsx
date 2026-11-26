@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import DOMPurify from "dompurify";
 import { allTags, deleteItem, getFull, showNotice, updateItem, useStore } from "./store";
-import { cleanTag, hostOf, readingTime, type Body, type Item } from "./types";
+import { cleanTag, hostOf, progressLabel, readingTime, type Body, type Item } from "./types";
 
 // Saved pages come from the open web: strip anything that could run code,
 // and make every link open in a new tab so the reader is never navigated away.
@@ -60,6 +60,59 @@ export function Reader({ id }: { id: string }) {
   const body = useMemo(() => (content?.content_html ? sanitize(content.content_html) : null), [content]);
   const offline = !navigator.onLine;
 
+  // Remembers how far down the article the reader has got, and returns there
+  // on the next visit. Progress only ever goes up; "Mark as unread" resets it.
+  const startProgress = fetched?.read_progress ?? 0;
+  useEffect(() => {
+    if (!body) return;
+    let best = startProgress;
+    let stored = startProgress;
+    let lastStore = 0;
+    const page = document.documentElement;
+
+    const persist = (force: boolean) => {
+      if (best <= stored) return;
+      if (!force && (best - stored < 3 || Date.now() - lastStore < 4000)) return;
+      stored = best;
+      lastStore = Date.now();
+      updateItem(id, { read_progress: best });
+    };
+    const onScroll = () => {
+      let seen = Math.round(((window.scrollY + window.innerHeight) / page.scrollHeight) * 100);
+      if (seen >= 95) seen = 100;
+      if (seen > best) {
+        best = Math.min(100, seen);
+        persist(best === 100);
+      }
+    };
+    const onHide = () => persist(true);
+
+    let shortTimer: number | undefined;
+    // A short wait lets the article lay itself out before its height is measured.
+    const settle = window.setTimeout(() => {
+      if (best > 5 && best < 95) {
+        window.scrollTo(0, Math.max(0, (best / 100) * page.scrollHeight - window.innerHeight));
+      } else if (page.scrollHeight <= window.innerHeight + 40) {
+        // The whole piece fits on screen: count it as read after a moment.
+        shortTimer = window.setTimeout(() => {
+          best = 100;
+          persist(true);
+        }, 8000);
+      }
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }, 60);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.clearTimeout(settle);
+      window.clearTimeout(shortTimer);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("visibilitychange", onHide);
+      persist(true);
+    };
+    // Deliberately not re-run when progress itself changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, body]);
+
   async function toggleArchive() {
     if (!item) return;
     await updateItem(item.id, { is_archived: !item.is_archived });
@@ -99,6 +152,14 @@ export function Reader({ id }: { id: string }) {
             <details className="menu">
               <summary className="link">More</summary>
               <div className="menu-items">
+                <button
+                  onClick={(e) => {
+                    e.currentTarget.closest("details")?.removeAttribute("open");
+                    updateItem(item.id, { read_progress: (item.read_progress ?? 0) >= 100 ? 0 : 100 });
+                  }}
+                >
+                  {(item.read_progress ?? 0) >= 100 ? "Mark as unread" : "Mark as read"}
+                </button>
                 <button className="danger" onClick={remove}>
                   Delete
                 </button>
@@ -114,7 +175,9 @@ export function Reader({ id }: { id: string }) {
       {item && (
         <article>
           <p className="item-meta">
-            {[item.site_name || hostOf(item.url), item.author, readingTime(item.word_count)].filter(Boolean).join(" · ")}
+            {[item.site_name || hostOf(item.url), item.author, readingTime(item.word_count), progressLabel(item)]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
           <h1>{item.title || item.url}</h1>
           <TagEditor item={item} suggestions={allTags(items)} />

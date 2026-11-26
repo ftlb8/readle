@@ -13,6 +13,8 @@ export type Item = {
   tags: string[];
   is_archived: boolean;
   is_favorite: boolean;
+  /** Percentage read, 0 to 100. Missing on copies stored before this was tracked. */
+  read_progress?: number;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -26,7 +28,7 @@ export type Body = {
 };
 
 /** The fields that can be changed after saving. `deleted_at` marks an item as removed. */
-export type ItemPatch = Partial<Pick<Item, "is_archived" | "is_favorite" | "tags" | "deleted_at">>;
+export type ItemPatch = Partial<Pick<Item, "is_archived" | "is_favorite" | "tags" | "deleted_at" | "read_progress">>;
 
 /** Something done on this device that still has to reach the server. */
 export type NewOutboxEntry = { at: string } & (
@@ -38,6 +40,13 @@ export type OutboxEntry = NewOutboxEntry & { key: number };
 export function readingTime(words: number | null): string | null {
   if (!words) return null;
   return `${Math.max(1, Math.round(words / 230))} min read`;
+}
+
+/** "Read ✓", "45% read", or nothing for an article that has barely been started. */
+export function progressLabel(item: Item): string | null {
+  const p = item.read_progress ?? 0;
+  if (p >= 100) return "Read ✓";
+  return p >= 5 ? `${p}% read` : null;
 }
 
 export function hostOf(url: string): string {

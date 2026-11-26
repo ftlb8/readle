@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { saveAndNotify, search, signOut, updateItem, useStore } from "./store";
-import { hostOf, readingTime, type Item } from "./types";
+import { hostOf, progressLabel, readingTime, type Item } from "./types";
 import { SetPassword } from "./SetPassword";
 
 type View = "list" | "favorites" | "archive";
@@ -207,18 +207,26 @@ function Row({ item, showArchived, onTag }: { item: Item; showArchived: boolean;
     item.site_name || hostOf(item.url),
     item.kind === "video" ? "Video" : readingTime(item.word_count),
     item.kind === "link" ? "Link only" : null,
+    progressLabel(item),
     showArchived && item.is_archived ? "Archived" : null,
   ]
     .filter(Boolean)
     .join(" · ");
 
+  const progress = item.read_progress ?? 0;
+
   return (
-    <li className="row">
+    <li className={progress >= 100 ? "row is-read" : "row"}>
       <a className="item" href={`#/item/${item.id}`}>
         <div className="item-text">
           <span className="item-meta">{meta}</span>
           <span className="item-title">{item.title || item.url}</span>
           {item.excerpt && <span className="item-excerpt">{item.excerpt}</span>}
+          {progress >= 5 && progress < 100 && (
+            <span className="progress" role="img" aria-label={`${progress}% read`}>
+              <span style={{ width: `${progress}%` }} />
+            </span>
+          )}
         </div>
         {item.image_url && (
           <img

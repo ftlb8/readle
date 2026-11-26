@@ -864,3 +864,29 @@ textarea:focus-visible {
   align-items: center;
   text-decoration: none;
 }
+
+/* Reading progress */
+.progress {
+  display: block;
+  height: 3px;
+  max-width: 220px;
+  margin-top: 6px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.row.is-read .item-title,
+.row.is-read .item-excerpt {
+  color: var(--muted);
+}
+
+.row.is-read .item-thumb {
+  opacity: 0.6;
+}
