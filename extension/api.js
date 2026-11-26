@@ -3,7 +3,7 @@
 const SUPABASE_URL = "https://kgnpncskdmzwqmjrrupx.supabase.co";
 // Public by design: identifies the project, grants nothing without a sign-in.
 const SUPABASE_KEY = "sb_publishable_TR1a-HqOvBOusa_4F8Kuyg_dyE7FG5-";
-export const APP_URL = "https://ftlb8.github.io/readle/";
+export const APP_URL = "https://readler.app/";
 
 const SESSION = "session";
 

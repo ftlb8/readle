@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Readler",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Save the page you are reading to your Readler list.",
   "icons": { "16": "icon-16.png", "32": "icon-32.png", "48": "icon-48.png", "128": "icon-128.png" },
   "action": {
