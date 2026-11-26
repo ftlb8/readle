@@ -170,18 +170,22 @@ button,
   padding: 0;
 }
 
+.row {
+  border-bottom: 1px solid var(--line);
+}
+
 .item {
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  padding: 16px 0;
-  border-bottom: 1px solid var(--line);
+  padding: 16px 0 6px;
   color: inherit;
   text-decoration: none;
 }
 
-.item.pending {
+.row.pending {
   opacity: 0.6;
+  padding-bottom: 12px;
 }
 
 .item-text {
@@ -523,4 +527,138 @@ button,
   font-weight: 700;
   text-decoration: underline;
   padding: 4px 6px;
+}
+
+/* Views, search and tags */
+.views {
+  display: flex;
+  gap: 4px;
+  margin: 10px 0 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.view {
+  min-height: 44px;
+  padding: 8px 10px;
+  background: none;
+  color: var(--muted);
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.view.active {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+.push {
+  margin-left: auto;
+}
+
+.search {
+  margin-top: 10px;
+}
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.row-foot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding-bottom: 4px;
+}
+
+.tags {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  padding: 4px 10px;
+  background: none;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.tag.active {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.icon {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  background: none;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.icon.text {
+  font-size: 0.875rem;
+}
+
+.icon.on {
+  color: var(--accent);
+}
+
+.icon:hover {
+  color: var(--text);
+}
+
+.reader-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.menu-items a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: 8px;
+}
+
+.menu-items a:hover {
+  background: var(--bg);
+}
+
+.menu-items .danger {
+  color: var(--error);
+}
+
+.tag-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: -12px 0 28px;
+}
+
+.tag-input {
+  width: 130px;
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.875rem;
+  border-radius: 999px;
 }

@@ -25,13 +25,15 @@ export type Body = {
   text_content: string | null;
 };
 
-/** Something done while offline that still has to reach the server. */
-export type OutboxEntry = {
-  key: number;
-  type: "save";
-  url: string;
-  at: string;
-};
+/** The fields that can be changed after saving. `deleted_at` marks an item as removed. */
+export type ItemPatch = Partial<Pick<Item, "is_archived" | "is_favorite" | "tags" | "deleted_at">>;
+
+/** Something done on this device that still has to reach the server. */
+export type NewOutboxEntry = { at: string } & (
+  | { type: "save"; url: string }
+  | { type: "update"; id: string; patch: ItemPatch }
+);
+export type OutboxEntry = NewOutboxEntry & { key: number };
 
 export function readingTime(words: number | null): string | null {
   if (!words) return null;
@@ -49,4 +51,9 @@ export function hostOf(url: string): string {
 /** Pulls the first web address out of shared text such as "Title https://…". */
 export function findUrl(text: string | null | undefined): string | null {
   return text?.match(/https?:\/\/[^\s<>"']+/i)?.[0] ?? null;
+}
+
+/** Tidies a typed tag: lower case, no leading #, single spaces. */
+export function cleanTag(raw: string): string {
+  return raw.trim().replace(/^#+/, "").replace(/\s+/g, " ").toLowerCase().slice(0, 40);
 }

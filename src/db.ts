@@ -4,7 +4,7 @@
 //   bodies - the article HTML and plain text, loaded only when needed
 //   outbox - actions taken offline, waiting to be sent
 //   meta   - small values such as the sync position
-import type { Body, Item, OutboxEntry } from "./types";
+import type { Body, Item, ItemPatch, NewOutboxEntry, OutboxEntry } from "./types";
 
 const DB_NAME = "readle";
 const DB_VERSION = 1;
@@ -75,6 +75,32 @@ export const db = {
     });
   },
 
+  /** Applies a change to the local copy of one item. */
+  patchItem(id: string, patch: ItemPatch): Promise<void> {
+    return tx(["items"], "readwrite", (t) => {
+      const store = t.objectStore("items");
+      const request = store.get(id);
+      request.onsuccess = () => {
+        if (request.result) store.put({ ...request.result, ...patch });
+      };
+    });
+  },
+
+  /** Calls `visit` with every stored article body, one at a time, to keep memory use low. */
+  async eachBody(visit: (body: Body) => void): Promise<void> {
+    const d = await open();
+    return new Promise((resolve, reject) => {
+      const request = d.transaction("bodies").objectStore("bodies").openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) return resolve();
+        visit(cursor.value);
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  },
+
   remove(ids: string[]): Promise<void> {
     return tx(["items", "bodies"], "readwrite", (t) => {
       for (const id of ids) {
@@ -89,7 +115,7 @@ export const db = {
     return done(d.transaction("outbox").objectStore("outbox").getAll());
   },
 
-  addToOutbox(entry: Omit<OutboxEntry, "key">): Promise<void> {
+  addToOutbox(entry: NewOutboxEntry): Promise<void> {
     return tx(["outbox"], "readwrite", (t) => {
       t.objectStore("outbox").add(entry);
     });

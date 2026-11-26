@@ -13,7 +13,7 @@ createRoot(document.getElementById("root")!).render(
 // Keeps the app available offline. Skipped during development so that code
 // changes always show up immediately.
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data?.type === "update-ready") markUpdateReady();
   });

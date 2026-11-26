@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { db } from "./db";
 import { supabase } from "./supabase";
-import { findUrl, type Body, type Item, type OutboxEntry } from "./types";
+import { findUrl, type Body, type Item, type ItemPatch, type OutboxEntry } from "./types";
 
 type State = {
   ready: boolean;
@@ -163,11 +163,15 @@ export function flushOutbox(): Promise<void> {
       let sent = 0;
       for (const entry of await db.outbox()) {
         try {
-          await db.putRows([await sendSave(entry.url)]);
-          sent++;
+          if (entry.type === "save") {
+            await db.putRows([await sendSave(entry.url)]);
+            sent++;
+          } else {
+            await sendUpdate(entry.id, entry.patch);
+          }
         } catch (err) {
           if (!(err instanceof RejectedError)) break; // still offline: try again later
-          set({ error: `${entry.url}: ${err.message}` });
+          set({ error: err.message });
         }
         await db.removeFromOutbox(entry.key);
       }
@@ -178,6 +182,70 @@ export function flushOutbox(): Promise<void> {
     }
   })();
   return flushing;
+}
+
+async function sendUpdate(id: string, patch: ItemPatch): Promise<void> {
+  const { error } = await supabase.from("items").update(patch).eq("id", id);
+  if (!error) return;
+  // Database errors carry a code; a dropped connection does not.
+  if (!error.code) throw new Error(error.message);
+  throw new RejectedError(`Could not update the item: ${error.message}`);
+}
+
+/**
+ * Changes an item (archive, favorite, tags). The change shows immediately,
+ * is kept on this device, and is sent to the server as soon as possible.
+ */
+export async function updateItem(id: string, patch: ItemPatch): Promise<void> {
+  await db.patchItem(id, patch);
+  await db.addToOutbox({ type: "update", id, patch, at: new Date().toISOString() });
+  await reload();
+  flushOutbox();
+}
+
+/** Removes an item from every device. */
+export async function deleteItem(id: string): Promise<void> {
+  await db.remove([id]);
+  await db.addToOutbox({ type: "update", id, patch: { deleted_at: new Date().toISOString() }, at: new Date().toISOString() });
+  await reload();
+  flushOutbox();
+}
+
+export function showNotice(text: string) {
+  notify(text);
+}
+
+/**
+ * Finds the items containing every word of the query, looking at the title,
+ * description, site, author, tags and the full article text.
+ */
+export async function search(query: string): Promise<Set<string>> {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const found = new Set<string>();
+  if (terms.length === 0) return found;
+
+  const details = new Map<string, string>();
+  for (const i of state.items) {
+    details.set(i.id, [i.title, i.excerpt, i.site_name, i.author, i.url, i.tags.join(" ")].join(" ").toLowerCase());
+  }
+  const check = (id: string, text: string) => {
+    if (terms.every((t) => text.includes(t))) found.add(id);
+  };
+  details.forEach((text, id) => check(id, text));
+  await db.eachBody((body) => {
+    const about = details.get(body.id);
+    if (about !== undefined && !found.has(body.id) && body.text_content) {
+      check(body.id, about + " " + body.text_content.toLowerCase());
+    }
+  });
+  return found;
+}
+
+/** Every tag in use, most used first. */
+export function allTags(items: Item[]): string[] {
+  const counts = new Map<string, number>();
+  for (const i of items) for (const t of i.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t);
 }
 
 /** Saves a link and reports the outcome in the notice bar. Used by the share sheet. */
