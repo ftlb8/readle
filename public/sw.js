@@ -16,7 +16,14 @@ async function refreshShell() {
       if (!(await cache.match(url))) await cache.add(url);
     }),
   );
+  const previous = await cache.match("./index.html");
+  const changed = previous ? (await previous.text()) !== html : false;
   await cache.put("./index.html", response);
+  if (changed) {
+    // Tell open windows a newer version is waiting, so they can offer a reload.
+    const clients = await self.clients.matchAll({ type: "window" });
+    clients.forEach((client) => client.postMessage({ type: "update-ready" }));
+  }
 }
 
 self.addEventListener("install", (event) => {

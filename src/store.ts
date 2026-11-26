@@ -14,6 +14,7 @@ type State = {
   syncing: boolean;
   notice: string | null;
   error: string | null;
+  updateReady: boolean;
 };
 
 let state: State = {
@@ -24,6 +25,7 @@ let state: State = {
   syncing: false,
   notice: null,
   error: null,
+  updateReady: false,
 };
 
 const listeners = new Set<() => void>();
@@ -56,6 +58,11 @@ function notify(notice: string) {
   set({ notice });
   window.clearTimeout(noticeTimer);
   noticeTimer = window.setTimeout(() => set({ notice: null }), 3500);
+}
+
+/** Called when a newer version of the app has been downloaded in the background. */
+export function markUpdateReady() {
+  set({ updateReady: true });
 }
 
 export function dismissError() {

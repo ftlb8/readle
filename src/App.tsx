@@ -40,7 +40,7 @@ function handleShare() {
 export function App() {
   const [signedIn, setSignedIn] = useState(() => localStorage.getItem(SIGNED_IN) === "1");
   const [checked, setChecked] = useState(signedIn);
-  const { notice, error } = useStore();
+  const { notice, error, updateReady } = useStore();
   const route = useRoute();
 
   useEffect(() => {
@@ -82,6 +82,14 @@ export function App() {
       )}
 
       <div className="toasts" aria-live="polite">
+        {updateReady && (
+          <div className="toast">
+            <span>A new version of Readle is ready.</span>
+            <button className="toast-action" onClick={() => window.location.reload()}>
+              Reload
+            </button>
+          </div>
+        )}
         {notice && <div className="toast">{notice}</div>}
         {error && (
           <div className="toast toast-error" role="alert">

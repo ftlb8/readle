@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { saveAndNotify, signOut, useStore } from "./store";
 import { hostOf, readingTime } from "./types";
+import { SetPassword } from "./SetPassword";
 
 export function List() {
   const { ready, items, pending, online, syncing } = useStore();
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
+  const [settingPassword, setSettingPassword] = useState(false);
 
   const visible = items.filter((i) => !i.is_archived);
 
@@ -32,10 +34,22 @@ export function List() {
       <header className="topbar">
         <h1 className="brand">Readle</h1>
         <span className="status muted">{!online ? "Offline" : syncing ? "Syncing…" : ""}</span>
-        <button className="link" onClick={confirmSignOut}>
-          Sign out
-        </button>
+        <details className="menu">
+          <summary className="link">Account</summary>
+          <div className="menu-items">
+            <button
+              onClick={(e) => {
+                e.currentTarget.closest("details")?.removeAttribute("open");
+                setSettingPassword(true);
+              }}
+            >
+              Set password
+            </button>
+            <button onClick={confirmSignOut}>Sign out</button>
+          </div>
+        </details>
       </header>
+      {settingPassword && <SetPassword onClose={() => setSettingPassword(false)} />}
 
       <form className="add" onSubmit={save}>
         <input
