@@ -890,3 +890,38 @@ textarea:focus-visible {
 .row.is-read .item-thumb {
   opacity: 0.6;
 }
+
+/* Filter bar: read state, then every tag. Scrolls sideways on a phone. */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 -16px;
+  padding: 12px 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filters::-webkit-scrollbar {
+  display: none;
+}
+
+.filters .tag {
+  flex: none;
+  min-height: 34px;
+  padding: 6px 12px;
+}
+
+.filters .tag.active {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.filters-sep {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--line);
+}

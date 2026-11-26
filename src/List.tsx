@@ -1,9 +1,15 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { saveAndNotify, search, signOut, updateItem, useStore } from "./store";
+import { allTags, saveAndNotify, search, signOut, updateItem, useStore } from "./store";
 import { hostOf, progressLabel, readingTime, type Item } from "./types";
 import { SetPassword } from "./SetPassword";
 
 type View = "list" | "favorites" | "archive";
+type ReadFilter = "all" | "unread" | "read";
+const READ_FILTERS: { id: ReadFilter; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "unread", label: "Unread" },
+  { id: "read", label: "Read" },
+];
 const VIEWS: { id: View; label: string }[] = [
   { id: "list", label: "My list" },
   { id: "favorites", label: "Favorites" },
@@ -18,6 +24,7 @@ export function List() {
   const [settingPassword, setSettingPassword] = useState(false);
   const [view, setView] = useState<View>("list");
   const [tag, setTag] = useState<string | null>(null);
+  const [readFilter, setReadFilter] = useState<ReadFilter>("all");
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<Set<string> | null>(null);
@@ -41,6 +48,9 @@ export function List() {
   // A search looks through everything; otherwise the chosen view applies.
   const visible = items.filter((item) => {
     if (tag && !item.tags.includes(tag)) return false;
+    const finished = (item.read_progress ?? 0) >= 100;
+    if (readFilter === "unread" && finished) return false;
+    if (readFilter === "read" && !finished) return false;
     if (searching) return matches?.has(item.id) ?? false;
     if (view === "list") return !item.is_archived;
     if (view === "archive") return item.is_archived;
@@ -48,7 +58,8 @@ export function List() {
   });
 
   const waiting = pending.filter((entry) => entry.type === "save");
-  const showQueue = view === "list" && !searching && !tag;
+  const showQueue = view === "list" && !searching && !tag && readFilter !== "read";
+  const tags = allTags(items);
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -75,7 +86,10 @@ export function List() {
 
   function emptyMessage(): string {
     if (searching) return matches === null ? "Searching…" : "Nothing matches that search.";
+    if (tag && readFilter !== "all") return `Nothing ${readFilter} here is tagged #${tag}.`;
     if (tag) return `Nothing here is tagged #${tag}.`;
+    if (readFilter === "read") return "Nothing here has been read to the end yet.";
+    if (readFilter === "unread" && items.length > 0) return "Nothing unread here. You are all caught up.";
     if (view === "favorites") return "No favorites yet. Tap the star on anything worth keeping.";
     if (view === "archive") return "Nothing archived yet. Archive what you have finished to keep your list short.";
     return syncing ? "Fetching your reading list…" : "Nothing saved yet. Paste a link above to add your first one.";
@@ -155,14 +169,29 @@ export function List() {
         />
       )}
 
-      {tag && (
-        <p className="filter">
-          Showing
-          <button className="tag active" onClick={() => setTag(null)} aria-label={`Stop filtering by ${tag}`}>
-            #{tag} ×
+      <div className="filters" role="group" aria-label="Filters">
+        {READ_FILTERS.map((f) => (
+          <button
+            key={f.id}
+            className={readFilter === f.id ? "tag active" : "tag"}
+            aria-pressed={readFilter === f.id}
+            onClick={() => setReadFilter(f.id)}
+          >
+            {f.label}
           </button>
-        </p>
-      )}
+        ))}
+        {tags.length > 0 && <span className="filters-sep" aria-hidden="true" />}
+        {tags.map((t) => (
+          <button
+            key={t}
+            className={tag === t ? "tag active" : "tag"}
+            aria-pressed={tag === t}
+            onClick={() => setTag(tag === t ? null : t)}
+          >
+            #{t}
+          </button>
+        ))}
+      </div>
 
       <ul className="items">
         {showQueue && saving && (
