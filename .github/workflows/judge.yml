@@ -12,6 +12,10 @@ on:
         description: "Publish the picks to everyone"
         type: boolean
         default: false
+      test:
+        description: "Test only: read two articles and store nothing"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -40,3 +44,4 @@ jobs:
           COLLECTOR_TOKEN: ${{ secrets.COLLECTOR_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PUBLISH: ${{ github.event_name == 'schedule' || inputs.publish == true }}
+          TEST: ${{ inputs.test == true }}

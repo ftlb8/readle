@@ -93,12 +93,12 @@ export function Reader({ id }: { id: string }) {
             <button className="icon text" onClick={toggleArchive}>
               {item.is_archived ? "Move to list" : "Archive"}
             </button>
+            <a className="icon text" href={item.url} target="_blank" rel="noopener noreferrer">
+              Original ↗
+            </a>
             <details className="menu">
               <summary className="link">More</summary>
               <div className="menu-items">
-                <a href={item.url} target="_blank" rel="noopener noreferrer">
-                  Open original ↗
-                </a>
                 <button className="danger" onClick={remove}>
                   Delete
                 </button>

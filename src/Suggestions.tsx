@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { loadPicks, markPicksSeen, publishWeek, saveAndNotify, useStore, votePick } from "./store";
+import { loadPicks, markPicksSeen, publishWeek, saveSuggestion, useStore, votePick } from "./store";
 import { sameArticle, type Suggestion } from "./types";
 
 const GROUP_TITLES: Record<Suggestion["grp"], string> = {
@@ -30,10 +30,12 @@ export function Suggestions() {
 
   const weeks = [...new Set(picks.map((p) => p.week))];
 
-  async function save(pick: Suggestion) {
+  /** Saves the suggestion; with `open`, goes straight to the clean reading view. */
+  async function save(pick: Suggestion, open: boolean) {
     setSaving(pick.id);
-    await saveAndNotify(pick.url);
+    const id = await saveSuggestion(pick);
     setSaving(null);
+    if (open && id) window.location.hash = `#/item/${id}`;
   }
 
   return (
@@ -81,7 +83,9 @@ export function Suggestions() {
                   <h3 className="group-title">{GROUP_TITLES[group]}</h3>
                   <ul className="items">
                     {inGroup.map((pick) => {
-                      const saved = items.some((i) => sameArticle(i.url, pick.url));
+                      const mine = items.find((i) => sameArticle(i.url, pick.url));
+                      const saved = !!mine;
+                      const busy = saving === pick.id;
                       const meta = [
                         pick.publication,
                         pick.reading_minutes ? `${pick.reading_minutes} min read` : null,
@@ -95,9 +99,27 @@ export function Suggestions() {
                           </a>
                           <p className="pick-reason">{pick.reason}</p>
                           {pick.via.length > 0 && <p className="item-meta">Recommended by {pick.via.join(", ")}</p>}
+                          {pick.tags.length > 0 && (
+                            <div className="tags pick-tags">
+                              {pick.tags.map((t) => (
+                                <span key={t} className="tag">
+                                  #{t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           <div className="row-foot">
-                            <button className="icon text primary-text" disabled={saved || saving === pick.id} onClick={() => save(pick)}>
-                              {saved ? "Saved ✓" : saving === pick.id ? "Saving…" : "Save to my list"}
+                            {mine ? (
+                              <a className="icon text primary-text" href={`#/item/${mine.id}`}>
+                                Read
+                              </a>
+                            ) : (
+                              <button className="icon text primary-text" disabled={busy} onClick={() => save(pick, true)}>
+                                {busy ? "Saving…" : "Read"}
+                              </button>
+                            )}
+                            <button className="icon text" disabled={saved || busy} onClick={() => save(pick, false)}>
+                              {saved ? "In your list ✓" : "Save for later"}
                             </button>
                             <a className="icon text" href={pick.url} target="_blank" rel="noopener noreferrer">
                               Open original ↗

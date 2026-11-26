@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { db } from "./db";
 import { supabase } from "./supabase";
-import { findUrl, type Body, type Item, type ItemPatch, type OutboxEntry, type Suggestion } from "./types";
+import { findUrl, SUGGESTED_TAG, type Body, type Item, type ItemPatch, type OutboxEntry, type Suggestion } from "./types";
 
 type State = {
   ready: boolean;
@@ -136,8 +136,11 @@ async function sendSave(url: string): Promise<Item & Body> {
 
 class RejectedError extends Error {}
 
-/** Saves a link now, or queues it when there is no connection. */
-export async function saveUrl(raw: string): Promise<SaveResult> {
+/**
+ * Saves a link now, or queues it when there is no connection. Any `tags` are
+ * added to the saved article. Returns the article's id once it is saved.
+ */
+export async function saveUrl(raw: string, tags: string[] = []): Promise<{ status: SaveResult; id?: string }> {
   const url = findUrl(raw) ?? raw.trim();
   if (!/^https?:\/\//i.test(url)) throw new Error("That does not look like a web link");
 
@@ -147,15 +150,17 @@ export async function saveUrl(raw: string): Promise<SaveResult> {
       const item = await sendSave(url);
       await db.putRows([item]);
       await reload();
-      return "saved";
+      const merged = [...new Set([...item.tags, ...tags])];
+      if (merged.length !== item.tags.length) await updateItem(item.id, { tags: merged });
+      return { status: "saved", id: item.id };
     } catch (err) {
       if (err instanceof RejectedError) throw err;
       // Anything else is a connection problem: fall through and queue it.
     }
   }
-  await db.addToOutbox({ type: "save", url, at: new Date().toISOString() });
+  await db.addToOutbox({ type: "save", url, tags, at: new Date().toISOString() });
   await reload();
-  return "queued";
+  return { status: "queued" };
 }
 
 /** Sends everything that was queued while offline. */
@@ -170,7 +175,13 @@ export function flushOutbox(): Promise<void> {
       for (const entry of await db.outbox()) {
         try {
           if (entry.type === "save") {
-            await db.putRows([await sendSave(entry.url)]);
+            const item = await sendSave(entry.url);
+            const merged = [...new Set([...item.tags, ...(entry.tags ?? [])])];
+            if (merged.length !== item.tags.length) {
+              await sendUpdate(item.id, { tags: merged });
+              item.tags = merged;
+            }
+            await db.putRows([item]);
             sent++;
           } else {
             await sendUpdate(entry.id, entry.patch);
@@ -257,8 +268,8 @@ export function allTags(items: Item[]): string[] {
 /** Saves a link and reports the outcome in the notice bar. Used by the share sheet. */
 export async function saveAndNotify(raw: string): Promise<boolean> {
   try {
-    const result = await saveUrl(raw);
-    notify(result === "saved" ? "Saved" : "Saved for later — it will download when you are back online");
+    const { status } = await saveUrl(raw);
+    notify(status === "saved" ? "Saved" : "Saved for later — it will download when you are back online");
     return true;
   } catch (err) {
     set({ error: (err as Error).message });
@@ -287,7 +298,8 @@ const GROUP_ORDER = { new: 0, curated: 1, archive: 2 };
 export async function loadPicks(): Promise<void> {
   if (state.picks.length === 0) {
     const cached = await db.meta<Suggestion[]>("picks");
-    if (cached?.length) set({ picks: cached });
+    // Copies stored by an older version of the app have no topic tags.
+    if (cached?.length) set({ picks: cached.map((p) => ({ ...p, tags: p.tags ?? [] })) });
   }
   if (!navigator.onLine) return;
   const { data: auth } = await supabase.auth.getSession();
@@ -305,11 +317,27 @@ export async function loadPicks(): Promise<void> {
     for (const row of data ?? []) votes.set(row.pick_id, row.vote);
   }
   const picks = (rows.data as Suggestion[])
-    .map((p) => ({ ...p, vote: votes.get(p.id) ?? 0 }))
+    .map((p) => ({ ...p, tags: p.tags ?? [], vote: votes.get(p.id) ?? 0 }))
     .sort((a, b) => b.week.localeCompare(a.week) || GROUP_ORDER[a.grp] - GROUP_ORDER[b.grp] || a.position - b.position);
   await db.setMeta("picks", picks);
   localStorage.setItem("readle.isAdmin", isAdmin ? "1" : "0");
   set({ picks, isAdmin });
+}
+
+/**
+ * Saves a suggestion to the reading list, tagged as suggested and with its
+ * topic tags. Returns the saved article's id, or null if it could not be
+ * saved right now.
+ */
+export async function saveSuggestion(pick: Suggestion): Promise<string | null> {
+  try {
+    const { status, id } = await saveUrl(pick.url, [SUGGESTED_TAG, ...pick.tags]);
+    notify(status === "saved" ? "Saved to your list" : "Saved for later — it will download when you are back online");
+    return id ?? null;
+  } catch (err) {
+    set({ error: (err as Error).message });
+    return null;
+  }
 }
 
 /** Remembers that the newest suggestions have been looked at, which clears the dot. */

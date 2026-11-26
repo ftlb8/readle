@@ -30,7 +30,7 @@ export type ItemPatch = Partial<Pick<Item, "is_archived" | "is_favorite" | "tags
 
 /** Something done on this device that still has to reach the server. */
 export type NewOutboxEntry = { at: string } & (
-  | { type: "save"; url: string }
+  | { type: "save"; url: string; tags?: string[] }
   | { type: "update"; id: string; patch: ItemPatch }
 );
 export type OutboxEntry = NewOutboxEntry & { key: number };
@@ -63,12 +63,16 @@ export type Suggestion = {
   title: string;
   publication: string;
   via: string[];
+  tags: string[];
   reason: string;
   reading_minutes: number | null;
   language: string;
   published: boolean;
   vote: number;
 };
+
+/** Added to every article saved from the weekly suggestions. */
+export const SUGGESTED_TAG = "suggested";
 
 /** True when two addresses point at the same page, ignoring tracking details. */
 export function sameArticle(a: string, b: string): boolean {
