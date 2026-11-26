@@ -1,0 +1,22 @@
+# Supabase pauses free projects after about a week without activity.
+# This asks the database for the time twice a week so that never happens.
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "17 6 * * 1,4" # Mondays and Thursdays, 06:17 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the database
+        run: |
+          curl --fail --silent --show-error --max-time 30 \
+            -X POST "https://kgnpncskdmzwqmjrrupx.supabase.co/rest/v1/rpc/ping" \
+            -H "apikey: sb_publishable_TR1a-HqOvBOusa_4F8Kuyg_dyE7FG5-" \
+            -H "Content-Type: application/json" \
+            -d '{}'
