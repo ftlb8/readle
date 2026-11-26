@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { db } from "./db";
 import { supabase } from "./supabase";
+import { closePlayer, removeAudio } from "./audio";
 import { findUrl, SUGGESTED_TAG, type Body, type Item, type ItemPatch, type OutboxEntry, type Suggestion } from "./types";
 
 type State = {
@@ -214,6 +215,7 @@ async function sendUpdate(id: string, patch: ItemPatch): Promise<void> {
  * is kept on this device, and is sent to the server as soon as possible.
  */
 export async function updateItem(id: string, patch: ItemPatch): Promise<void> {
+  if (patch.is_archived) removeAudio(id); // archived: its audio is no longer needed here
   await db.patchItem(id, patch);
   await db.addToOutbox({ type: "update", id, patch, at: new Date().toISOString() });
   await reload();
@@ -222,6 +224,7 @@ export async function updateItem(id: string, patch: ItemPatch): Promise<void> {
 
 /** Removes an item from every device. */
 export async function deleteItem(id: string): Promise<void> {
+  removeAudio(id);
   await db.remove([id]);
   await db.addToOutbox({ type: "update", id, patch: { deleted_at: new Date().toISOString() }, at: new Date().toISOString() });
   await reload();
@@ -398,6 +401,8 @@ export async function start() {
 
 /** Signs out and removes the downloaded reading list from this device. */
 export async function signOut() {
+  closePlayer();
+  if ("caches" in window) await caches.delete("readler-audio");
   await supabase.auth.signOut();
   await db.clear(true);
   localStorage.removeItem("readle.isAdmin");

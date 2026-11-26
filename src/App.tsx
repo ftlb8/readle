@@ -7,6 +7,7 @@ import { List } from "./List";
 import { Reader } from "./Reader";
 import { Suggestions } from "./Suggestions";
 import { CurationSettings } from "./CurationSettings";
+import { PlayerBar } from "./PlayerBar";
 
 // Remembered separately from the session itself: when the phone is offline the
 // session cannot be renewed, but the downloaded reading list must still open.
@@ -82,6 +83,7 @@ export function App() {
           {itemId && <Reader key={itemId} id={itemId} />}
           {route === "/suggestions" && <Suggestions />}
           {route === "/suggestions/settings" && <CurationSettings />}
+          <PlayerBar />
         </>
       )}
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import DOMPurify from "dompurify";
 import { allTags, deleteItem, getFull, showNotice, updateItem, useStore } from "./store";
+import { hasAudio, listen, removeAudio, useAudio } from "./audio";
 import { cleanTag, hostOf, progressLabel, readingTime, type Body, type Item } from "./types";
 
 // Saved pages come from the open web: strip anything that could run code,
@@ -59,6 +60,14 @@ export function Reader({ id }: { id: string }) {
 
   const body = useMemo(() => (content?.content_html ? sanitize(content.content_html) : null), [content]);
   const offline = !navigator.onLine;
+
+  // Listening: whether this article's audio is on the device, and what the player is doing with it.
+  const audio = useAudio();
+  const [audioStored, setAudioStored] = useState(false);
+  const mineInPlayer = audio.itemId === id;
+  useEffect(() => {
+    hasAudio(id).then(setAudioStored);
+  }, [id, audio.changes]);
 
   // Remembers how far down the article the reader has got, and returns there
   // on the next visit. Progress only ever goes up; "Mark as unread" resets it.
@@ -181,6 +190,30 @@ export function Reader({ id }: { id: string }) {
           </p>
           <h1>{item.title || item.url}</h1>
           <TagEditor item={item} suggestions={allTags(items)} />
+
+          {item.kind === "article" && body && (
+            <div className="listen-row">
+              <button
+                className="listen"
+                disabled={(offline && !audioStored && !mineInPlayer) || (mineInPlayer && audio.status === "preparing")}
+                onClick={() => listen(item)}
+              >
+                {mineInPlayer && audio.status === "preparing"
+                  ? "Preparing audio…"
+                  : mineInPlayer && audio.status === "playing"
+                    ? "❚❚ Pause"
+                    : audioStored || mineInPlayer
+                      ? "▶ Continue listening"
+                      : "▶ Listen"}
+              </button>
+              {audioStored && !(mineInPlayer && audio.status === "preparing") && (
+                <button className="link" onClick={() => removeAudio(id).then(() => setAudioStored(false))}>
+                  Remove audio
+                </button>
+              )}
+              {offline && !audioStored && !mineInPlayer && <span className="muted">Needs a connection the first time</span>}
+            </div>
+          )}
 
           {item.kind === "video" && item.video_embed_url && (
             <div className="video">

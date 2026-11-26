@@ -967,3 +967,139 @@ textarea:focus-visible {
 .voice-name {
   text-transform: capitalize;
 }
+
+/* Listening */
+.listen-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin: -12px 0 28px;
+}
+
+.listen {
+  min-height: 44px;
+  padding: 8px 18px;
+  background: none;
+  color: var(--accent);
+  font-weight: 600;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+}
+
+.listen:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.has-player .page {
+  padding-bottom: calc(170px + env(safe-area-inset-bottom));
+}
+
+.has-player .toasts {
+  bottom: calc(150px + env(safe-area-inset-bottom));
+}
+
+.player {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 8;
+  padding: 10px max(16px, calc((100vw - 680px) / 2 + 16px)) calc(10px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.player-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--error);
+}
+
+.player-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--serif);
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+
+.player-close {
+  min-width: 44px;
+  min-height: 36px;
+  background: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.player-preparing {
+  display: grid;
+  gap: 2px;
+  padding: 6px 0 10px;
+  font-size: 0.9rem;
+}
+
+.player-preparing .progress {
+  max-width: none;
+}
+
+.player-seek {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  accent-color: var(--accent);
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.player-time {
+  min-width: 96px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.player-button {
+  min-width: 48px;
+  min-height: 44px;
+  background: none;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.player-main {
+  min-width: 56px;
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: 999px;
+  font-size: 1rem;
+}
+
+.player-rate {
+  color: var(--muted);
+}
