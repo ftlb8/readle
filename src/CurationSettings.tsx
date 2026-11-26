@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { useStore } from "./store";
+import { VoicePicker } from "./VoicePicker";
 
 type Source = { key: string; name: string; kind: "publication" | "curator"; active: boolean; language: string };
 
@@ -67,7 +68,7 @@ export function CurationSettings() {
           ← Back
         </button>
       </header>
-      <h1 className="page-title">Suggestion settings</h1>
+      <h1 className="page-title">Settings</h1>
       {error && <p className="error" role="alert">{error}</p>}
 
       <section className="settings-block">
@@ -90,6 +91,8 @@ export function CurationSettings() {
           </button>
         </div>
       </section>
+
+      <VoicePicker />
 
       {sources === null && !error && <p className="center muted">Loading…</p>}
 

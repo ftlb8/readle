@@ -1,0 +1,13 @@
+-- Listening to articles. Applied to the live project on 2026-11-26 as
+-- "speech_usage_and_voice"; the full statements are in the project's migration
+-- history (Supabase dashboard → Database → Migrations). Summary:
+--
+--   speech_usage             characters turned into speech, per person per month
+--   speech_charge(chars)     counts text against the caller's monthly allowance;
+--                            refuses when it would go over (members 300,000
+--                            characters, admin 1,500,000; override with
+--                            curation_config rows speech_cap_member / speech_cap_admin)
+--   speech_voice()           the voice articles are read in (default "alloy")
+--   speech_admin_set_voice() admin only: choose the voice
+--
+-- Audio is never stored in the database or in Supabase storage.
