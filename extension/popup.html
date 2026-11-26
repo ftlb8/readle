@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <h1>Readle</h1>
+
+    <section id="login" hidden>
+      <form id="login-form">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="username" required />
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" required />
+        <button id="login-button">Sign in</button>
+        <p class="hint">Use the password you set in Readle under Account → Set password.</p>
+      </form>
+    </section>
+
+    <section id="status" hidden>
+      <p id="message" role="status"></p>
+      <p id="detail" class="hint"></p>
+      <div class="row">
+        <a id="open" href="#" target="_blank" rel="noopener">Open Readle</a>
+        <button id="signout" class="plain">Sign out</button>
+      </div>
+    </section>
+
+    <p id="error" class="error" role="alert" hidden></p>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

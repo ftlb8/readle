@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Readle",
+  "version": "1.0.0",
+  "description": "Save the page you are reading to your Readle list.",
+  "icons": { "16": "icon-16.png", "32": "icon-32.png", "48": "icon-48.png", "128": "icon-128.png" },
+  "action": {
+    "default_title": "Save to Readle",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icon-16.png", "32": "icon-32.png" }
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
+  "host_permissions": ["https://kgnpncskdmzwqmjrrupx.supabase.co/*"],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "Save this page to Readle"
+    }
+  }
+}
