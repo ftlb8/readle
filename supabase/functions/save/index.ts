@@ -1,9 +1,12 @@
-// POST { url, html? }  ->  saves the page for the signed-in user and returns the item.
+// POST { url, html?, tags? }  ->  saves the page for the signed-in user and returns the item.
 // `url` may be raw shared text that contains a link. `html` is optional page
 // source captured by the browser extension (used for pages behind a login).
+// `tags` are added to the item; when none of them is a topic tag, topics are
+// chosen automatically.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildItem, normalizeUrl } from "./extract.ts";
+import { suggestTopics, TOPICS } from "./tagger.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -34,10 +37,18 @@ Deno.serve(async (req: Request) => {
 
   let url: string;
   let html: string | undefined;
+  let givenTags: string[] = [];
   try {
     const body = await req.json();
     url = normalizeUrl(body.url ?? body.text ?? "");
     html = typeof body.html === "string" && body.html.length > 0 ? body.html : undefined;
+    if (Array.isArray(body.tags)) {
+      givenTags = body.tags
+        .filter((t: unknown): t is string => typeof t === "string")
+        .map((t: string) => t.trim().toLowerCase().slice(0, 40))
+        .filter(Boolean)
+        .slice(0, 10);
+    }
   } catch (err) {
     return json({ error: (err as Error).message || "Bad request" }, 400);
   }
@@ -49,7 +60,18 @@ Deno.serve(async (req: Request) => {
     return json({ error: (err as Error).message }, 400);
   }
 
-  const row = { ...fields, url, user_id: auth.user.id, deleted_at: null, is_archived: false };
+  const row: Record<string, unknown> = { ...fields, url, user_id: auth.user.id, deleted_at: null, is_archived: false };
+
+  // Tags: keep what the item already has, add any that were passed in, and
+  // choose topics unless the item has some already.
+  if (fields.status !== "failed") {
+    const { data: existing } = await supabase.from("items").select("tags").eq("url", url).maybeSingle();
+    const current: string[] = existing?.tags ?? [];
+    const hasTopic = [...current, ...givenTags].some((t) => TOPICS.includes(t));
+    const added = hasTopic ? givenTags : [...givenTags, ...(await suggestTopics(fields))];
+    const merged = [...new Set([...current, ...added])];
+    if (merged.length !== current.length) row.tags = merged;
+  }
 
   // A failed fetch must not wipe out a copy that was saved successfully before.
   const { data, error } = await supabase

@@ -115,8 +115,8 @@ export function sync(): Promise<void> {
 
 type SaveResult = "saved" | "queued";
 
-async function sendSave(url: string): Promise<Item & Body> {
-  const { data, error } = await supabase.functions.invoke("save", { body: { url } });
+async function sendSave(url: string, tags: string[] = []): Promise<Item & Body> {
+  const { data, error } = await supabase.functions.invoke("save", { body: tags.length ? { url, tags } : { url } });
   if (error) {
     if (error instanceof FunctionsHttpError) {
       // The server looked at the link and refused it; retrying will not help.
@@ -147,7 +147,7 @@ export async function saveUrl(raw: string, tags: string[] = []): Promise<{ statu
   const { data: auth } = navigator.onLine ? await supabase.auth.getSession() : { data: { session: null } };
   if (auth.session) {
     try {
-      const item = await sendSave(url);
+      const item = await sendSave(url, tags);
       await db.putRows([item]);
       await reload();
       const merged = [...new Set([...item.tags, ...tags])];
@@ -175,7 +175,7 @@ export function flushOutbox(): Promise<void> {
       for (const entry of await db.outbox()) {
         try {
           if (entry.type === "save") {
-            const item = await sendSave(entry.url);
+            const item = await sendSave(entry.url, entry.tags ?? []);
             const merged = [...new Set([...item.tags, ...(entry.tags ?? [])])];
             if (merged.length !== item.tags.length) {
               await sendUpdate(item.id, { tags: merged });
