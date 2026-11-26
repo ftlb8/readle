@@ -13,7 +13,7 @@ const FETCH_TIMEOUT_MS = 45_000;
 const DEFAULT_MAX_ITEMS = 60;
 
 // Link parameters that only track where a reader came from.
-const TRACKING = /^(utm_\w+|ref|src|r|fbclid|gclid|mc_cid|mc_eid|igshid|smid|smtyp|cmpid|ito|ncid|ref_src|unlocked_article_code|gift|giftCopy|share|at_medium|at_campaign|CMP)$/i;
+const TRACKING = /^(utm_\w+|ref|src|r|fbclid|gclid|mc_cid|mc_eid|igshid|smid|smtyp|cmpid|ito|ncid|ref_src|unlocked_article_code|gift|giftCopy|share|share_key|at_medium|at_campaign|CMP)$/i;
 
 
 export function decodeEntities(text) {
