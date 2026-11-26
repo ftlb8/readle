@@ -34,6 +34,9 @@ const MIN_SCORE = 60;            // out of 100
 const MIN_WORDS = 1500;
 const MAX_ARTICLE_CHARS = 60_000; // about 10,000 words; longer pieces are judged on this much
 const CURATOR_BONUS = 3;         // points per curator that recommended it, up to two
+const EXTRA_SCORE = 85;          // an article this good is added even when its group is full
+const MAX_EXTRAS = 5;            // ...but no more than this many a week
+const TOO_MANY_HIGH_SCORES = 20; // more than this at 85+ suggests the scoring has become too generous
 const PARALLEL = 4;
 
 // The fixed set of topic tags. A pick gets one to three; they are copied onto
@@ -68,7 +71,12 @@ function textOf(response) {
 
 let taste = ""; // filled in once the reader's feedback has been fetched
 
-const groupOf = (c) => (c.origin === "curator" ? "curated" : "new");
+/**
+ * The curated group is for discoveries: recommended articles from publications
+ * that are not on the reader's own list. A recommended article from one of
+ * their own publications competes with that publication's new pieces instead.
+ */
+const groupOf = (c) => (c.origin === "curator" && !fromOwnPublication(c.url) ? "curated" : "new");
 
 /** The reader's recent thumbs, as examples of taste for both prompts. */
 function tasteExamples(feedback) {
@@ -144,6 +152,16 @@ const sources = new Map(
   JSON.parse(await readFile(new URL("./sources.json", import.meta.url), "utf8")).map((s) => [s.key, s]),
 );
 const feedCache = new Map();
+
+// Web addresses of the reader's own publications, for telling discoveries apart.
+const ownSites = [...sources.values()]
+  .filter((s) => s.kind === "publication")
+  .flatMap((s) => s.sites ?? [new URL(s.feed_url).hostname.replace(/^(www|feeds|api)\./, "")]);
+
+function fromOwnPublication(url) {
+  const host = new URL(url).hostname.replace(/^www\./, "");
+  return ownSites.some((site) => host === site || host.endsWith("." + site));
+}
 
 /** Some feeds carry the whole article; reading it there avoids the site's paywall or bot check. */
 async function textFromFeed(candidate) {
@@ -384,16 +402,22 @@ function select(pool) {
       leftovers.push(c);
     }
   }
-  // If one side ran short, the other fills the list.
-  for (const group of ["new", "curated"]) {
-    for (const c of leftovers) {
-      if (picks[group].length >= PICKS_PER_GROUP) break;
-      const publication = c.publication.toLowerCase();
-      if (used[group].has(publication) || picks.new.includes(c) || picks.curated.includes(c)) continue;
-      picks[group].push(c);
-      used[group].add(publication);
-    }
+  // If one side ran short, the other side gets the spare slots, under its own heading.
+  for (const c of leftovers) {
+    if (picks.new.length + picks.curated.length >= 2 * PICKS_PER_GROUP) break;
+    const group = groupOf(c);
+    const publication = c.publication.toLowerCase();
+    if (used[group].has(publication)) continue;
+    picks[group].push(c);
+    used[group].add(publication);
   }
+
+  // Exceptional pieces that found no slot are added as extras, best first.
+  const taken = new Set([...picks.new, ...picks.curated]);
+  const extras = ranked.filter((c) => !taken.has(c) && c.score >= EXTRA_SCORE).slice(0, MAX_EXTRAS);
+  for (const c of extras) picks[groupOf(c)].push(c);
+  picks.extras = extras.length;
+  picks.highScores = pool.filter((c) => c.score >= EXTRA_SCORE).length;
   return picks;
 }
 
@@ -464,6 +488,10 @@ const stored = await store({ p_token: TOKEN, p_first: null, p_evals: null, p_wee
 let cost = 0;
 const lines = [`Week ${week}: ${stored.picks} picks stored${PUBLISH ? " and published" : " as a draft"}${stored.skipped ? ` (${stored.skipped})` : ""}.`, ""];
 lines.push(`First pass: ${unseen.length} new candidates scored.`);
+lines.push(`Selection: ${chosen.extras} extra pick${chosen.extras === 1 ? "" : "s"} at ${EXTRA_SCORE}+; ${chosen.highScores} articles scored ${EXTRA_SCORE}+ in all.`);
+if (chosen.highScores > TOO_MANY_HIGH_SCORES) {
+  lines.push(`WARNING: ${chosen.highScores} articles scored ${EXTRA_SCORE} or more. The scoring may have become too generous and should be reviewed.`);
+}
 for (const [group, c] of Object.entries(counts)) {
   lines.push(`${group}: ${c.candidates} candidates, ${c.promising} promising, ${c.read} read in full, ${c.unreadable} unreadable, ${c.short} too short, ${c.carried} carried over; ${chosen[group].length} picked.`);
 }
