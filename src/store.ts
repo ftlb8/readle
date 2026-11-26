@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { db } from "./db";
 import { supabase } from "./supabase";
-import { findUrl, type Body, type Item, type ItemPatch, type OutboxEntry } from "./types";
+import { findUrl, type Body, type Item, type ItemPatch, type OutboxEntry, type Suggestion } from "./types";
 
 type State = {
   ready: boolean;
@@ -15,6 +15,9 @@ type State = {
   notice: string | null;
   error: string | null;
   updateReady: boolean;
+  picks: Suggestion[];
+  isAdmin: boolean;
+  picksSeen: string;
 };
 
 let state: State = {
@@ -26,6 +29,9 @@ let state: State = {
   notice: null,
   error: null,
   updateReady: false,
+  picks: [],
+  isAdmin: localStorage.getItem("readle.isAdmin") === "1",
+  picksSeen: localStorage.getItem("readle.picksSeen") ?? "",
 };
 
 const listeners = new Set<() => void>();
@@ -273,10 +279,76 @@ export async function getFull(id: string): Promise<{ item: Item; body: Body | nu
   return { item: fresh, body: { id, content_html, text_content } };
 }
 
+// ---------- weekly suggestions ----------
+
+const GROUP_ORDER = { new: 0, curated: 1, archive: 2 };
+
+/** Loads the weekly suggestions: from this device first, then fresh from the server. */
+export async function loadPicks(): Promise<void> {
+  if (state.picks.length === 0) {
+    const cached = await db.meta<Suggestion[]>("picks");
+    if (cached?.length) set({ picks: cached });
+  }
+  if (!navigator.onLine) return;
+  const { data: auth } = await supabase.auth.getSession();
+  if (!auth.session) return;
+
+  const [rows, admin] = await Promise.all([
+    supabase.from("picks").select("*").order("week", { ascending: false }).limit(300),
+    supabase.rpc("is_admin"),
+  ]);
+  if (rows.error) return;
+  const isAdmin = admin.data === true;
+  const votes = new Map<string, number>();
+  if (isAdmin) {
+    const { data } = await supabase.from("pick_feedback").select("pick_id,vote");
+    for (const row of data ?? []) votes.set(row.pick_id, row.vote);
+  }
+  const picks = (rows.data as Suggestion[])
+    .map((p) => ({ ...p, vote: votes.get(p.id) ?? 0 }))
+    .sort((a, b) => b.week.localeCompare(a.week) || GROUP_ORDER[a.grp] - GROUP_ORDER[b.grp] || a.position - b.position);
+  await db.setMeta("picks", picks);
+  localStorage.setItem("readle.isAdmin", isAdmin ? "1" : "0");
+  set({ picks, isAdmin });
+}
+
+/** Remembers that the newest suggestions have been looked at, which clears the dot. */
+export function markPicksSeen() {
+  const newest = state.picks[0]?.week ?? "";
+  if (!newest || newest === state.picksSeen) return;
+  localStorage.setItem("readle.picksSeen", newest);
+  set({ picksSeen: newest });
+}
+
+/** Admin only: thumbs up or down on a suggestion. Choosing the same thumb again clears it. */
+export async function votePick(id: string, vote: 1 | -1): Promise<void> {
+  const current = state.picks.find((p) => p.id === id)?.vote ?? 0;
+  const next = current === vote ? 0 : vote;
+  set({ picks: state.picks.map((p) => (p.id === id ? { ...p, vote: next } : p)) });
+  const { error } =
+    next === 0
+      ? await supabase.from("pick_feedback").delete().eq("pick_id", id)
+      : await supabase.from("pick_feedback").upsert({ pick_id: id, vote: next });
+  if (error) {
+    set({ picks: state.picks.map((p) => (p.id === id ? { ...p, vote: current } : p)), error: `Could not record that: ${error.message}` });
+  } else {
+    db.setMeta("picks", state.picks);
+  }
+}
+
+/** Admin only: makes a draft week visible to everyone. */
+export async function publishWeek(week: string): Promise<void> {
+  const { error } = await supabase.rpc("curation_admin_publish", { p_week: week });
+  if (error) return set({ error: `Could not publish: ${error.message}` });
+  notify("Published to everyone");
+  await loadPicks();
+}
+
 /** Sends queued actions, then downloads changes. */
 export async function refresh() {
   await flushOutbox();
   await sync();
+  await loadPicks();
 }
 
 let started = false;
@@ -300,5 +372,6 @@ export async function start() {
 export async function signOut() {
   await supabase.auth.signOut();
   await db.clear(true);
-  set({ items: [], pending: [], error: null });
+  localStorage.removeItem("readle.isAdmin");
+  set({ items: [], pending: [], error: null, picks: [], isAdmin: false });
 }

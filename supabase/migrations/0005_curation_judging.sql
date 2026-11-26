@@ -1,0 +1,27 @@
+-- Weekly suggestions, phases 2 and 3. Applied to the live project on 2026-11-26
+-- as two migrations, "curation_judging" and "curation_feedback_and_settings".
+-- Their full statements are in the project's migration history (Supabase
+-- dashboard → Database → Migrations). This file summarises what they create.
+--
+-- Tables
+--   evaluations     what the judge concluded about a candidate: first-pass score,
+--                   verdict, 0-100 score, one-line reason, real headline, word count
+--   picks           the weekly suggestions (week, group, position, card details,
+--                   published flag). Signed-in members read published weeks;
+--                   the admin also sees drafts
+--   pick_feedback   the admin's thumbs on a pick (1 or -1)
+--
+-- Functions for the scheduled jobs (require the secret token)
+--   curation_check_token   shared token check
+--   curation_job_fetch     the profile, recent thumbs, and candidates in play;
+--                          leaves out anything the admin has already saved
+--   curation_job_store     records first-pass scores, full-read results and picks;
+--                          never overwrites a published week
+--   curation_ingest        (updated) no longer re-activates a source the admin
+--                          switched off
+--
+-- Functions for the settings screen (admin only)
+--   curation_admin_get          profile and list of sources
+--   curation_admin_set_profile  save the profile
+--   curation_admin_set_source   switch a source on or off
+--   curation_admin_publish      make a draft week visible to everyone

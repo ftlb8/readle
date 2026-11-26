@@ -53,6 +53,36 @@ export function findUrl(text: string | null | undefined): string | null {
   return text?.match(/https?:\/\/[^\s<>"']+/i)?.[0] ?? null;
 }
 
+/** One weekly suggestion. `vote` is the admin's own thumb: 1, -1 or 0. */
+export type Suggestion = {
+  id: string;
+  week: string;
+  grp: "new" | "curated" | "archive";
+  position: number;
+  url: string;
+  title: string;
+  publication: string;
+  via: string[];
+  reason: string;
+  reading_minutes: number | null;
+  language: string;
+  published: boolean;
+  vote: number;
+};
+
+/** True when two addresses point at the same page, ignoring tracking details. */
+export function sameArticle(a: string, b: string): boolean {
+  const key = (raw: string) => {
+    try {
+      const u = new URL(raw);
+      return u.hostname.replace(/^www\./, "") + u.pathname.replace(/\/$/, "");
+    } catch {
+      return raw;
+    }
+  };
+  return key(a) === key(b);
+}
+
 /** Tidies a typed tag: lower case, no leading #, single spaces. */
 export function cleanTag(raw: string): string {
   return raw.trim().replace(/^#+/, "").replace(/\s+/g, " ").toLowerCase().slice(0, 40);

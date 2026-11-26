@@ -5,6 +5,8 @@ import { findUrl } from "./types";
 import { Login } from "./Login";
 import { List } from "./List";
 import { Reader } from "./Reader";
+import { Suggestions } from "./Suggestions";
+import { CurationSettings } from "./CurationSettings";
 
 // Remembered separately from the session itself: when the phone is offline the
 // session cannot be renewed, but the downloaded reading list must still open.
@@ -74,10 +76,12 @@ export function App() {
       ) : (
         <>
           {/* The list stays mounted behind the reader so it keeps its scroll position. */}
-          <div hidden={!!itemId}>
+          <div hidden={route !== "/"}>
             <List />
           </div>
           {itemId && <Reader key={itemId} id={itemId} />}
+          {route === "/suggestions" && <Suggestions />}
+          {route === "/suggestions/settings" && <CurationSettings />}
         </>
       )}
 

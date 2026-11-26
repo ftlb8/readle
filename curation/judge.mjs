@@ -54,7 +54,22 @@ function textOf(response) {
   return response.content.filter((b) => b.type === "text").map((b) => b.text).join("");
 }
 
+let taste = ""; // filled in once the reader's feedback has been fetched
+
 const groupOf = (c) => (c.origin === "curator" ? "curated" : "new");
+
+/** The reader's recent thumbs, as examples of taste for both prompts. */
+function tasteExamples(feedback) {
+  const list = (vote) =>
+    feedback.filter((f) => f.vote === vote).map((f) => `- ${f.title} (${f.publication})`).join("\n");
+  const liked = list(1), disliked = list(-1);
+  if (!liked && !disliked) return "";
+  return (
+    "\n\nEarlier suggestions the reader has reacted to. Use them as examples of taste, not as rules:" +
+    (liked ? `\n<liked>\n${liked}\n</liked>` : "") +
+    (disliked ? `\n<not_for_them>\n${disliked}\n</not_for_them>` : "")
+  );
+}
 
 // ---------- first pass ----------
 
@@ -62,13 +77,13 @@ const FirstPass = z.object({
   scores: z.array(z.object({ i: z.number().int(), score: z.number().int() })),
 });
 
-function firstPassSystem(profile) {
+function firstPassSystem(profile, taste) {
   return `You help curate a weekly reading list of long-form articles for one reader.
 
 The reader's interests, in their own words:
 <reader>
 ${profile}
-</reader>
+</reader>${taste}
 
 You will receive a numbered list of candidate articles. For each you only have a title, where it comes from, its address and sometimes a short excerpt. Score each from 0 to 10 for how likely it is to be a long-form piece (an essay, feature, analysis or piece of criticism) that this reader would be glad to have read.
 
@@ -95,7 +110,7 @@ async function firstPass(profile, candidates) {
       const response = await client.messages.parse({
         model: FIRST_PASS_MODEL,
         max_tokens: 8000,
-        system: firstPassSystem(profile),
+        system: firstPassSystem(profile, taste),
         messages: [{ role: "user", content: list }],
         output_config: { effort: "low", format: zodOutputFormat(FirstPass) },
       });
@@ -143,6 +158,8 @@ async function textFromPage(candidate) {
   const site = document.querySelector('meta[property="og:site_name"]')?.getAttribute("content")?.trim() || null;
   const article = new Readability(document).parse();
   if (!article?.textContent) return null;
+  // A "checking your browser" screen is not the article.
+  if (/^(one moment|just a moment|attention required|access denied|are you a robot)/i.test(article.title ?? "")) return null;
   return { text: article.textContent.replace(/\s+/g, " ").trim(), title: article.title, site: article.siteName || site };
 }
 
@@ -170,13 +187,13 @@ const Reading = z.object({
   reason: z.string(),
 });
 
-function readerSystem(profile) {
+function readerSystem(profile, taste) {
   return `You are helping one reader decide what deserves their limited reading time. Each week they get a short list of long-form articles chosen for them, and you are judging one candidate.
 
 The reader's interests, in their own words:
 <reader>
 ${profile}
-</reader>
+</reader>${taste}
 
 You will be given one article. Read it as a well-read, demanding editor who knows this reader, and report:
 
@@ -244,7 +261,7 @@ async function fullRead(profile, candidate) {
     response = await askReader({
       model: READER_MODEL,
       max_tokens: 4000,
-      system: readerSystem(profile),
+      system: readerSystem(profile, taste),
       messages: [
         {
           role: "user",
@@ -334,8 +351,9 @@ function select(pool) {
 
 // ---------- main ----------
 
-const { profile, candidates } = await rpc("curation_job_fetch", { p_token: TOKEN });
+const { profile, candidates, feedback = [] } = await rpc("curation_job_fetch", { p_token: TOKEN });
 if (!profile) throw new Error("No reader profile is stored yet");
+taste = tasteExamples(feedback);
 const byId = new Map(candidates.map((c) => [c.id, c]));
 
 // 1. First pass on everything not looked at before.

@@ -11,7 +11,8 @@ const VIEWS: { id: View; label: string }[] = [
 ];
 
 export function List() {
-  const { ready, items, pending, online, syncing } = useStore();
+  const { ready, items, pending, online, syncing, picks, picksSeen } = useStore();
+  const hasNewPicks = picks.length > 0 && picks[0].week !== picksSeen;
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [settingPassword, setSettingPassword] = useState(false);
@@ -85,6 +86,12 @@ export function List() {
       <header className="topbar">
         <h1 className="brand">Readler</h1>
         <span className="status muted">{!online ? "Offline" : syncing ? "Syncing…" : ""}</span>
+        {picks.length > 0 && (
+          <a className="link suggestions-link" href="#/suggestions">
+            Suggestions
+            {hasNewPicks && <span className="dot" aria-label="new suggestions" />}
+          </a>
+        )}
         <details className="menu">
           <summary className="link">Account</summary>
           <div className="menu-items">
