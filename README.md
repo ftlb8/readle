@@ -34,3 +34,17 @@ Backend: Supabase project `readle` (ref `kgnpncskdmzwqmjrrupx`).
 
 After that, clicking the button (or pressing Alt+Shift+S) saves the current tab.
 Right-clicking a link offers **Save link to Readler**.
+
+## Adding a person
+
+Sign-ups are closed. To invite someone, create their account in the Supabase
+dashboard (Authentication → Users → Add user → Create new user, with
+"Auto Confirm User" ticked) and give them the temporary password. They change
+it in the app under Account → Set password.
+
+Each person can keep up to 1000 items. To change that for one person, run in
+the SQL editor:
+
+    insert into public.user_limits (user_id, max_items)
+    select id, 3000 from auth.users where email = 'person@example.com'
+    on conflict (user_id) do update set max_items = excluded.max_items;
