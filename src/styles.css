@@ -1103,3 +1103,22 @@ textarea:focus-visible {
 .player-rate {
   color: var(--muted);
 }
+
+/* The sign that an article has audio ready on this device */
+.audio-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  vertical-align: 1px;
+}
+
+.filters .tag.active .audio-dot {
+  background: var(--accent-text);
+}
+
+.listen-note {
+  font-size: 0.8125rem;
+}

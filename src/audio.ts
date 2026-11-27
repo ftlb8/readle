@@ -18,9 +18,13 @@ export type AudioState = {
   rate: number;
   error: string | null;
   changes: number; // goes up whenever audio is added to or removed from the device
+  storedIds: string[]; // articles whose audio is on this device
 };
 
 const RATES = [1, 1.25, 1.5, 1.75, 2];
+/** Audio is deleted from the device this many days after it was made. */
+export const AUDIO_DAYS = 3;
+const CREATED = "X-Created";
 const CACHE = "readler-audio";
 const PARALLEL = 3;
 const key = (id: string) => `/audio/${id}`;
@@ -38,6 +42,7 @@ let state: AudioState = {
   rate: Number(localStorage.getItem("readle.audio.rate")) || 1,
   error: null,
   changes: 0,
+  storedIds: [],
 };
 const listeners = new Set<() => void>();
 function set(patch: Partial<AudioState>) {
@@ -148,6 +153,37 @@ async function stored(itemId: string): Promise<Blob | null> {
   return hit ? hit.blob() : null;
 }
 
+/**
+ * Looks at what audio is on the device, deletes anything older than
+ * AUDIO_DAYS, and records which articles still have some.
+ */
+export async function refreshStored(): Promise<void> {
+  if (!("caches" in window)) return;
+  const cache = await caches.open(CACHE);
+  const limit = Date.now() - AUDIO_DAYS * 24 * 60 * 60 * 1000;
+  const kept: string[] = [];
+  for (const request of await cache.keys()) {
+    const id = new URL(request.url).pathname.split("/").pop() ?? "";
+    const response = await cache.match(request);
+    if (!response || !id) continue;
+    const created = Date.parse(response.headers.get(CREATED) ?? "");
+    if (Number.isNaN(created)) {
+      // Made before audio was dated: start its three days now.
+      await cache.put(request, new Response(await response.blob(), { headers: stamp() }));
+    } else if (created < limit && state.itemId !== id) {
+      await cache.delete(request);
+      localStorage.removeItem(positionKey(id));
+      continue;
+    }
+    kept.push(id);
+  }
+  set({ storedIds: kept, changes: state.changes + 1 });
+}
+
+function stamp(): HeadersInit {
+  return { "Content-Type": "audio/mpeg", [CREATED]: new Date().toISOString() };
+}
+
 /** True when this article's audio is already on the device. */
 export async function hasAudio(itemId: string): Promise<boolean> {
   return (await stored(itemId)) !== null;
@@ -189,8 +225,8 @@ export async function listen(item: { id: string; title: string | null; site_name
       audio = await generate(item.id, mine);
       if (!audio) return; // another article was started meanwhile
       if ("caches" in window) {
-        await (await caches.open(CACHE)).put(key(item.id), new Response(audio, { headers: { "Content-Type": "audio/mpeg" } }));
-        set({ changes: state.changes + 1 });
+        await (await caches.open(CACHE)).put(key(item.id), new Response(audio, { headers: stamp() }));
+        await refreshStored();
       }
     }
     if (mine !== run) return;
@@ -249,7 +285,7 @@ export async function removeAudio(itemId: string): Promise<void> {
   if (state.itemId === itemId) closePlayer();
   localStorage.removeItem(positionKey(itemId));
   if ("caches" in window) await (await caches.open(CACHE)).delete(key(itemId));
-  set({ changes: state.changes + 1 });
+  await refreshStored();
 }
 
 // ---------- lock screen and headphone buttons ----------
@@ -320,4 +356,10 @@ player.addEventListener("ended", () => {
 });
 player.addEventListener("error", () => {
   if (state.itemId && player.src) set({ status: "idle", itemId: null, error: "This audio could not be played." });
+});
+
+// Clear out old audio when the app opens, and again whenever it comes back to the front.
+refreshStored();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refreshStored();
 });

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { allTags, saveAndNotify, search, signOut, updateItem, useStore } from "./store";
 import { hostOf, progressLabel, readingTime, type Item } from "./types";
 import { SetPassword } from "./SetPassword";
+import { listen, useAudio, type AudioState } from "./audio";
 
 type View = "list" | "favorites" | "archive";
 type ReadFilter = "all" | "unread" | "read";
@@ -19,6 +20,10 @@ const VIEWS: { id: View; label: string }[] = [
 export function List() {
   const { ready, items, pending, online, syncing, picks, picksSeen } = useStore();
   const hasNewPicks = picks.length > 0 && picks[0].week !== picksSeen;
+  const audio = useAudio();
+  const withAudio = new Set(audio.storedIds);
+  const [audioOnly, setAudioOnly] = useState(false);
+  const filterAudio = audioOnly && withAudio.size > 0;
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const [settingPassword, setSettingPassword] = useState(false);
@@ -48,6 +53,7 @@ export function List() {
   // A search looks through everything; otherwise the chosen view applies.
   const visible = items.filter((item) => {
     if (tag && !item.tags.includes(tag)) return false;
+    if (filterAudio && !withAudio.has(item.id)) return false;
     const finished = (item.read_progress ?? 0) >= 100;
     if (readFilter === "unread" && finished) return false;
     if (readFilter === "read" && !finished) return false;
@@ -58,7 +64,7 @@ export function List() {
   });
 
   const waiting = pending.filter((entry) => entry.type === "save");
-  const showQueue = view === "list" && !searching && !tag && readFilter !== "read";
+  const showQueue = view === "list" && !searching && !tag && readFilter !== "read" && !filterAudio;
   const tags = allTags(items);
 
   async function save(e: FormEvent) {
@@ -86,6 +92,7 @@ export function List() {
 
   function emptyMessage(): string {
     if (searching) return matches === null ? "Searching…" : "Nothing matches that search.";
+    if (filterAudio) return "No article in this view has audio ready.";
     if (tag && readFilter !== "all") return `Nothing ${readFilter} here is tagged #${tag}.`;
     if (tag) return `Nothing here is tagged #${tag}.`;
     if (readFilter === "read") return "Nothing here has been read to the end yet.";
@@ -180,6 +187,11 @@ export function List() {
             {f.label}
           </button>
         ))}
+        {withAudio.size > 0 && (
+          <button className={filterAudio ? "tag active" : "tag"} aria-pressed={filterAudio} onClick={() => setAudioOnly(!filterAudio)}>
+            <span className="audio-dot" aria-hidden="true" /> Audio
+          </button>
+        )}
         {tags.length > 0 && <span className="filters-sep" aria-hidden="true" />}
         {tags.map((t) => (
           <button
@@ -219,7 +231,14 @@ export function List() {
               ),
           )}
         {visible.map((item) => (
-          <Row key={item.id} item={item} showArchived={searching || !!tag} onTag={setTag} />
+          <Row
+            key={item.id}
+            item={item}
+            showArchived={searching || !!tag}
+            onTag={setTag}
+            hasAudio={withAudio.has(item.id)}
+            audio={audio.itemId === item.id ? audio : null}
+          />
         ))}
       </ul>
 
@@ -231,7 +250,19 @@ export function List() {
   );
 }
 
-function Row({ item, showArchived, onTag }: { item: Item; showArchived: boolean; onTag: (tag: string) => void }) {
+function Row({
+  item,
+  showArchived,
+  onTag,
+  hasAudio,
+  audio,
+}: {
+  item: Item;
+  showArchived: boolean;
+  onTag: (tag: string) => void;
+  hasAudio: boolean;
+  audio: AudioState | null; // set when this article is the one in the player
+}) {
   const meta = [
     item.site_name || hostOf(item.url),
     item.kind === "video" ? "Video" : readingTime(item.word_count),
@@ -248,7 +279,10 @@ function Row({ item, showArchived, onTag }: { item: Item; showArchived: boolean;
     <li className={progress >= 100 ? "row is-read" : "row"}>
       <a className="item" href={`#/item/${item.id}`}>
         <div className="item-text">
-          <span className="item-meta">{meta}</span>
+          <span className="item-meta">
+            {hasAudio && <span className="audio-dot" role="img" aria-label="Audio ready" title="Audio ready" />}
+            {meta}
+          </span>
           <span className="item-title">{item.title || item.url}</span>
           {item.excerpt && <span className="item-excerpt">{item.excerpt}</span>}
           {progress >= 5 && progress < 100 && (
@@ -276,6 +310,11 @@ function Row({ item, showArchived, onTag }: { item: Item; showArchived: boolean;
             </button>
           ))}
         </div>
+        {(hasAudio || audio) && (
+          <button className="icon text primary-text" disabled={audio?.status === "preparing"} onClick={() => listen(item)}>
+            {audio?.status === "playing" ? "❚❚ Pause" : audio?.status === "preparing" ? "Preparing…" : "▶ Listen"}
+          </button>
+        )}
         <button
           className={item.is_favorite ? "icon on" : "icon"}
           aria-label={item.is_favorite ? "Remove from favorites" : "Add to favorites"}

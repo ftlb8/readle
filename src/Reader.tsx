@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import DOMPurify from "dompurify";
 import { allTags, deleteItem, getFull, showNotice, updateItem, useStore } from "./store";
-import { hasAudio, listen, removeAudio, useAudio } from "./audio";
+import { AUDIO_DAYS, hasAudio, listen, removeAudio, useAudio } from "./audio";
 import { cleanTag, hostOf, progressLabel, readingTime, type Body, type Item } from "./types";
 
 // Saved pages come from the open web: strip anything that could run code,
@@ -210,6 +210,9 @@ export function Reader({ id }: { id: string }) {
                 <button className="link" onClick={() => removeAudio(id).then(() => setAudioStored(false))}>
                   Remove audio
                 </button>
+              )}
+              {audioStored && (
+                <span className="muted listen-note">Kept on this device for {AUDIO_DAYS} days</span>
               )}
               {offline && !audioStored && !mineInPlayer && <span className="muted">Needs a connection the first time</span>}
             </div>
